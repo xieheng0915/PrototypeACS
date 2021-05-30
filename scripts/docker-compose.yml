@@ -1,0 +1,198 @@
+version: '2.2'
+services:
+  nginx:
+    image: freeacs/nginx
+    mem_limit: 1000000000
+    restart: always
+    ports:
+      - 80:80
+    networks:
+      - mynetwork
+    links:
+      - web
+      - webservice
+      - tr069
+      - stun
+      - syslog
+      - core
+  web:
+    image: freeacs/web
+    restart: always
+    mem_limit: 2048000000
+    depends_on:
+    - db
+    networks:
+      - mynetwork
+    environment:
+      - WEB_PROPERTIES
+      - WEB_CONFIRMCHANGES
+      - WEB_CONFIDENTIALS_RESTRICTED
+      - MAIN_DATASOURCE_JDBCURL
+      - MAIN_DATASOURCE_USERNAME
+      - MAIN_DATASOURCE_PASSWORD
+      - MONITOR_LOCATION
+      - SYSLOG_SERVER_HOST
+      - SERVER_PORT
+      - TZ
+    volumes:
+      - web_logs:/app/app/logs
+#     - ./conf/web/application-config.properties:/opt/docker/config/application-config.properties
+#     - ./conf/web/logback.xml:/opt/docker/config/logback.xml
+  monitor:
+    image: freeacs/monitor
+    restart: always
+    mem_limit: 2048000000
+    depends_on:
+    - db
+    networks:
+      - mynetwork
+    environment:
+      - MONITOR_URL_CORE
+      - MONITOR_URL_SYSLOG
+      - MONITOR_URL_TR069
+      - MONITOR_URL_WEB
+      - MONITOR_URL_WEBSERVICE
+      - MONITOR_URL_STUN
+      - SYSLOG_SERVER_HOST
+      - SERVER_PORT
+      - TZ
+    volumes:
+      - monitor_logs:/app/app/logs
+#     - ./conf/monitor/application-config.properties:/opt/docker/config/application-config.properties
+#     - ./conf/monitor/logback.xml:/opt/docker/config/logback.xml
+  tr069:
+    image: freeacs/tr069
+    restart: always
+    mem_limit: 2048000000
+    depends_on:
+    - db
+    networks:
+      - mynetwork
+    environment:
+      - TR069_AUTH_METHOD
+      - TR069_FILE_AUTH_USED
+      - TR069_DISCOVERY_MODE
+      - TR069_DISCOVERY_BLOCK
+      - TR069_CONCURRENT_DOWNLOAD_LIMIT
+      - TR069_DIGEST_SECRET
+      - MAIN_DATASOURCE_JDBCURL
+      - MAIN_DATASOURCE_USERNAME
+      - MAIN_DATASOURCE_PASSWORD
+      - SYSLOG_SERVER_HOST
+      - SERVER_PORT
+      - TZ
+    volumes:
+      - tr069_logs:/app/app/logs
+#     - ./conf/tr069/application-config.properties:/opt/docker/config/application-config.properties
+#     - ./conf/tr069/logback.xml:/opt/docker/config/logback.xml
+  syslog:
+    image: freeacs/syslog
+    restart: always
+    mem_limit: 2048000000
+    depends_on:
+    - db
+    networks:
+      - mynetwork
+    environment:
+      - MAIN_DATASOURCE_JDBCURL
+      - MAIN_DATASOURCE_USERNAME
+      - MAIN_DATASOURCE_PASSWORD
+      - SYSLOG_SERVER_HOST
+      - SERVER_PORT
+      - TZ
+    volumes:
+      - syslog_logs:/app/app/logs
+#     - ./conf/syslog/application-config.properties:/opt/docker/config/application-config.properties
+#     - ./conf/syslog/logback.xml:/opt/docker/config/logback.xml
+  core:
+    image: freeacs/core
+    restart: always
+    mem_limit: 2048000000
+    depends_on:
+    - db
+    networks:
+      - mynetwork
+    environment:
+      - MAIN_DATASOURCE_JDBCURL
+      - MAIN_DATASOURCE_USERNAME
+      - MAIN_DATASOURCE_PASSWORD
+      - SYSLOG_SERVER_HOST
+      - SERVER_PORT
+      - TZ
+    volumes:
+      - core_logs:/app/app/logs
+#     - ./conf/core/application-config.properties:/opt/docker/config/application-config.properties
+#     - ./conf/core/logback.xml:/opt/docker/config/logback.xml
+  stun:
+    image: freeacs/stun
+    restart: always
+    mem_limit: 2048000000
+    ports:
+      - 3478:3478/udp
+      - 3479:3479/udp
+    depends_on:
+    - db
+    networks:
+      - mynetwork
+    environment:
+      - MAIN_DATASOURCE_JDBCURL
+      - MAIN_DATASOURCE_USERNAME
+      - MAIN_DATASOURCE_PASSWORD
+      - SYSLOG_SERVER_HOST
+      - SERVER_PORT
+      - PRIMARY_IP
+      - SECONDARY_IP
+      - TZ
+    volumes:
+      - stun_logs:/app/app/logs
+#     - ./conf/stun/application-config.properties:/opt/docker/config/application-config.properties
+#     - ./conf/stun/logback.xml:/opt/docker/config/logback.xml
+  webservice:
+    image: freeacs/webservice
+    restart: always
+    mem_limit: 2048000000
+    depends_on:
+    - db
+    networks:
+      - mynetwork
+    environment:
+      - MAIN_DATASOURCE_JDBCURL
+      - MAIN_DATASOURCE_USERNAME
+      - MAIN_DATASOURCE_PASSWORD
+      - SYSLOG_SERVER_HOST
+      - SERVER_PORT
+      - TZ
+    volumes:
+      - webservice_logs:/app/app/logs
+#     - ./conf/webservice/application-config.properties:/opt/docker/config/application-config.properties
+#     - ./conf/webservice/logback.xml:/opt/docker/config/logback.xml
+  db:
+    image: freeacs/mysql
+    command: --max_allowed_packet=32M
+    restart: always
+    mem_limit: 1000000000
+    environment:
+      - TZ
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      mynetwork:
+        aliases:
+          - db.main
+          - db.syslog
+
+volumes:
+  mysql-data:
+  core_logs:
+  web_logs:
+  webservice_logs:
+  syslog_logs:
+  stun_logs:
+  tr069_logs:
+  monitor_logs:
+
+networks:
+  mynetwork:
+    driver: bridge
